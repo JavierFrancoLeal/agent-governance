@@ -343,7 +343,7 @@ async function frameContexts() {
   const out = [];
   for (const f of frames) {
     try {
-      const r = await state.call("Page.createIsolatedWorld", { frameId: f.id, worldName: "cockpit", grantUniveralAccess: true });
+      const r = await state.call("Page.createIsolatedWorld", { frameId: f.id, worldName: "cockpit", grantUniversalAccess: true });
       out.push({ frameId: f.id, url: f.url, isMain: f.parentId === undefined, contextId: r.result.executionContextId });
     } catch {}
   }
@@ -646,7 +646,7 @@ async function cmdClick(sel) {
   if (meta === null) return err(`No element matched selector ${sel}.`);
   const label = (meta && meta.label) || "";
   const override = tierForLabel(label, loadTiers());
-  const tier = resolveActionTier(label, loadTiers(), { isSubmit: meta && meta.isSubmit, href: meta && meta.href });
+  let tier = resolveActionTier(label, loadTiers(), { isSubmit: meta && meta.isSubmit, href: meta && meta.href });
   // Human-approved pending YELLOW: consume the one-time approval for this exact click.
   if (tier === "YELLOW" && state.pendingYellow && state.pendingYellow.sel === sel && state.pendingYellow.label === label) {
     state.pendingYellow = null;
@@ -872,7 +872,7 @@ async function extClick(sel) {
   if (meta === null) return err(`No element matched selector ${sel}.`);
   const label = (meta && meta.label) || "";
   const override = tierForLabel(label, loadTiers());
-  const tier = resolveActionTier(label, loadTiers(), { isSubmit: meta && meta.isSubmit, href: meta && meta.href });
+  let tier = resolveActionTier(label, loadTiers(), { isSubmit: meta && meta.isSubmit, href: meta && meta.href });
   // Human-approved pending YELLOW: consume the one-time approval for this exact click.
   if (tier === "YELLOW" && state.pendingYellow && state.pendingYellow.sel === sel && state.pendingYellow.label === label) {
     state.pendingYellow = null;
