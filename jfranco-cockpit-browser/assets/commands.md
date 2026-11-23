@@ -35,7 +35,7 @@ Every action is logged to `~/.dsh/cockpit-browser/audit.jsonl` (mode 0600).
 ## Multi-frame (iframes) and `<select>`
 
 - `read`/`fill`/`click` locate the selector across the **main frame and every
-  iframe** (CDP isolated worlds with `grantUniversalAccess`), so Google and
+  iframe** (CDP isolated worlds with `grantUniveralAccess`), so Google and
   Facebook forms inside iframes work.
 - `fill` handles `<select>` (native value + `change`/`input` events) and
   text inputs (native setter + events, React-compatible).

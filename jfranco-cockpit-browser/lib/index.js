@@ -343,7 +343,7 @@ async function frameContexts() {
   const out = [];
   for (const f of frames) {
     try {
-      const r = await state.call("Page.createIsolatedWorld", { frameId: f.id, worldName: "cockpit", grantUniversalAccess: true });
+      const r = await state.call("Page.createIsolatedWorld", { frameId: f.id, worldName: "cockpit", grantUniveralAccess: true });
       out.push({ frameId: f.id, url: f.url, isMain: f.parentId === undefined, contextId: r.result.executionContextId });
     } catch {}
   }
