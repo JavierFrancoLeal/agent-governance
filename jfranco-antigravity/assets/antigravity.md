@@ -1,0 +1,49 @@
+# Antigravity — the code hands
+
+Delegate coding tasks from DeepSeek Harness to Google Antigravity (the `agy`
+CLI) under the J.Franco guardrails. One brain (DSH), Gemini as the code hands,
+the human signs.
+
+## The tool
+
+The agent calls `antigravity` with an `action`:
+
+| Action | `agy` mode | Tier | Behavior |
+|---|---|---|---|
+| `plan` | `--mode plan` | **GREEN** | Read-only analysis/proposal. Never touches files. |
+| `edit` | `--mode accept-edits` | **SEMI-AUTOMATIC ⚑** | Writes files. Review AFTER with `git diff`. Requires a clean Git tree. |
+| `audit` | `--mode plan` | **GREEN** | Cross-reviews the uncommitted `git diff` (bugs / hallucinated APIs / over-engineering). |
+| `models` | `agy models` | **GREEN** | Live-discovers installed Antigravity models, updates cache + `~/.dsh/PROTOCOLO.md`. |
+| *(not exposed)* | `--mode auto` / `--dangerously-skip-permissions` | **RED** | Never by the agent — the human runs those directly. |
+
+Parameters: `action`, `prompt` (required for `plan`/`edit`/`audit`), `cwd` (must be a Git repo for `edit`/`audit`),
+`effort` (`low`/`medium`/`high`/`xhigh`/`max`; lower = faster, `medium` default),
+`model` (optional override: any exact `agy models` ID like `gemini-4-neon-xhigh`, family alias like `neon`, or semantic capability tier `auto:reflex` / `auto:habit` / `auto:neocortex` / `auto:frontier`),
+`conversationId` (optional; resume a previous Antigravity conversation via
+`--conversation`).
+
+## Safety
+
+- Permissions are **session-scoped**: every call runs `agy` with
+  `--sandbox --settings '{"toolPermission":"proceed-in-sandbox"}'`, so the
+  user's global `~/.gemini/antigravity-cli/settings.json` is never changed.
+- `edit` refuses unless the Git tree is clean, so `git diff` afterwards shows
+  exactly what Antigravity changed.
+- `edit` also checks the active ledger (`DISK_LOCK`): it refuses when the
+  Antigravity IDE holds the lock (`GEMINI`), and serializes concurrent edits
+  with an exclusive lockfile so only one `antigravity(edit)` runs at a time.
+- Every delegation is logged to `~/.dsh/antigravity/audit.jsonl` with a
+  SHA-256 hash chain (tamper-evident), for `accountability-auditor` and
+  `autonomy-grader`. Each run writes a `phase: "start"` entry and a
+  post-execution `phase: "end"` entry (`antigravity_result`) capturing
+  `status`, `conversationId`, `durationSeconds`, and `deniedCount` when
+  present (`edit` also logs `ledgerLock`).
+
+## Working pattern
+
+1. `plan` first — get a proposal without touching files.
+2. Review the plan with the human.
+3. `edit` only in a Git repo with a clean tree — then review `git diff`.
+
+The committing/irreversible step is always the human's. The agent fills and
+plans; the human signs.

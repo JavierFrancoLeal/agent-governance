@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Browser di Cabina",
+    "description": "Un vero browser Chromium controllato dall'agente DSH via CDP: sessione persistente, freno costituzionale, bordo smeraldo, HUD da 36 px e livelli di guardrail."
+  }
+}

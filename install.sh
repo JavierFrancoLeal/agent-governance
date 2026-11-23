@@ -1,0 +1,192 @@
+#!/bin/sh
+# Agent Governance Suite — one-command installer (macOS / Linux).
+# Created by J.Franco. MIT license.
+#
+# What it does:
+#   1. Locates DeepSeek Harness.
+#   2. Asks your sector (creates decisions.md with starter rules).
+#   3. Asks where to install: desktop, campo (autonomous), or both.
+#   4. Installs the five core @javierfrancoleal/* plugins into each chosen profile.
+#   5. Creates ~/.dsh/decisions.md (training) and ~/.dsh/supervision.md (log).
+#   6. Offers to open the Action Panel.
+#
+# Safe to re-run: existing files and installed plugins are kept.
+set -e
+
+BLUE='\033[0;34m'; GREEN='\033[0;32m'; YELLOW='\033[0;33m'; RED='\033[0;31m'; NC='\033[0m'
+ROOT="$(cd "$(dirname "$0")" && pwd)"
+
+echo ""
+echo "${BLUE}=== Agent Governance Suite — Installer ===${NC}"
+echo ""
+
+# 1. Locate DeepSeek Harness CLI
+DSH=""
+for c in "/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" "$(command -v dsh 2>/dev/null)"; do
+  if [ -n "$c" ] && [ -x "$c" ]; then DSH="$c"; break; fi
+done
+if [ -z "$DSH" ]; then
+  echo "${RED}DeepSeek Harness was not found.${NC}"
+  echo "Install DeepSeek Harness first, then run this installer again."
+  exit 1
+fi
+echo "${GREEN}OK DeepSeek Harness found.${NC}"
+
+# 2. Sector (starter rules)
+echo ""
+echo "Choose your sector — this creates decisions.md with starter rules"
+echo "(more sectors and guidance in docs/SECTOR-CATALOG.md):"
+echo "  1) Hotel & Hospitality        2) Restaurant & Food Service   3) Retail & Commerce"
+echo "  4) Healthcare (clinic)        5) Legal (lawyer, notary)      6) Accounting & Tax"
+echo "  7) Real Estate                8) Insurance                   9) Beauty & Wellness"
+echo " 10) Auto & Repairs            11) Logistics & Delivery       12) Education & Training"
+echo " 13) Non-profits & Community   14) Construction & Trades      15) Freelancers & Pros"
+echo " 16) Management & Executive    17) Tourism & Travel           18) Police & Public Safety"
+echo " 19) Government & Public       G) General (no template)"
+printf "Choice [G]: "; read SECTOR
+case "$SECTOR" in
+  1) TPL="$ROOT/docs/decisions-hotel.md" ;;
+  2) TPL="$ROOT/docs/decisions-restaurant.md" ;;
+  3) TPL="$ROOT/docs/decisions-retail.md" ;;
+  4) TPL="$ROOT/docs/decisions-healthcare.md" ;;
+  5) TPL="$ROOT/docs/decisions-legal.md" ;;
+  6) TPL="$ROOT/docs/decisions-accounting.md" ;;
+  7) TPL="$ROOT/docs/decisions-realestate.md" ;;
+  8) TPL="$ROOT/docs/decisions-insurance.md" ;;
+  9) TPL="$ROOT/docs/decisions-beauty.md" ;;
+  10) TPL="$ROOT/docs/decisions-auto.md" ;;
+  11) TPL="$ROOT/docs/decisions-logistics.md" ;;
+  12) TPL="$ROOT/docs/decisions-education.md" ;;
+  13) TPL="$ROOT/docs/decisions-nonprofit.md" ;;
+  14) TPL="$ROOT/docs/decisions-construction.md" ;;
+  15) TPL="$ROOT/docs/decisions-freelance.md" ;;
+  16) TPL="$ROOT/docs/decisions-management.md" ;;
+  17) TPL="$ROOT/docs/decisions-tourism.md" ;;
+  18) TPL="$ROOT/docs/decisions-police.md" ;;
+  19) TPL="$ROOT/docs/decisions-government.md" ;;
+  *) TPL="" ;;
+esac
+
+# 3. Profile
+echo ""
+echo "Install for:"
+echo "  1) The open app (desktop)      2) Autonomous mode (campo)      3) Both (recommended)"
+printf "Choice [3]: "; read PROF
+case "$PROF" in
+  1) PROFILES="desktop" ;;
+  2) PROFILES="campo" ;;
+  *) PROFILES="desktop campo" ;;
+esac
+
+# 4. Ensure the campo (autonomous) profile exists when needed
+case " $PROFILES " in
+  *" campo "*)
+    CAMPODIR="$HOME/.dsh/profiles/campo"
+    if [ ! -f "$CAMPODIR/package.json" ]; then
+      echo "${YELLOW}Creating the campo (autonomous) profile…${NC}"
+      mkdir -p "$CAMPODIR"
+      cat > "$CAMPODIR/package.json" <<EOF
+{
+  "name": "dsh-profile-campo",
+  "private": true,
+  "dependencies": {},
+  "dsh": { "profile": { "bundles": ["@deepseek-ai/dsh-base", "@deepseek-ai/dsh-headless"] } }
+}
+EOF
+      cat > "$CAMPODIR/cordis.patch.yml" <<EOF
+- id: agent-default-model
+  name: "@deepseek-ai/dsh-agent-default-model"
+  config:
+    provider: deepseek-official
+    model: deepseek-flash
+    reasoningEffort: max
+EOF
+      cat > "$CAMPODIR/pnpm-workspace.yaml" <<EOF
+packages:
+  - .
+
+nodeLinker: hoisted
+autoInstallPeers: false
+EOF
+    fi
+    ;;
+esac
+
+# 5. Install the five core plugins into each chosen profile
+for prof in $PROFILES; do
+  echo ""
+  echo "${BLUE}Installing the five core plugins into profile '$prof'…${NC}"
+  for p in jfranco-workflow-master jfranco-decision-router \
+         jfranco-accountability-auditor jfranco-autonomy-grader jfranco-audit; do
+    if "$DSH" plugin --profile "$prof" add "$ROOT/$p" >/dev/null 2>&1; then
+      echo "${GREEN}OK $p -> $prof${NC}"
+    else
+      echo "${RED}FAILED $p -> $prof${NC}"
+    fi
+  done
+done
+
+# 6. decisions.md (global training rules)
+mkdir -p "$HOME/.dsh"
+DEC="$HOME/.dsh/decisions.md"
+if [ -f "$DEC" ]; then
+  echo ""
+  echo "${YELLOW}decisions.md already exists — keeping it (your rules are authoritative).${NC}"
+elif [ -n "$TPL" ]; then
+  {
+    echo "# decisions.md — your training file for the J.Franco suite."
+    echo "# Generated by the installer. Edit these rules freely: they replace the defaults."
+    echo "# Copy this file to a workspace root for per-workspace rules."
+    echo ""
+    cat "$TPL"
+  } > "$DEC"
+  echo ""
+  echo "${GREEN}OK decisions.md created from the sector template: $DEC${NC}"
+else
+  echo ""
+  echo "${GREEN}OK No sector template chosen — defaults stay active. Create decisions.md later to train the AI.${NC}"
+fi
+
+# 7. supervision.md (living supervision log)
+SUP="$HOME/.dsh/supervision.md"
+if [ ! -f "$SUP" ]; then
+  cat > "$SUP" <<EOF
+# supervision.md — living supervision log (append-only).
+
+Every accountability report is appended here. Do not edit or remove entries.
+
+EOF
+  echo "${GREEN}OK supervision.md created: $SUP${NC}"
+else
+  echo "${YELLOW}supervision.md already exists — keeping it.${NC}"
+fi
+
+# 8. Done
+echo ""
+echo "${GREEN}=== Installation complete ===${NC}"
+echo "Next steps:"
+echo "  1. Open ui/panel.html — or say 'listen' in a new DeepSeek Harness session."
+echo "  2. Edit ~/.dsh/decisions.md any time to train your rules."
+case " $PROFILES " in
+  *" campo "*) echo "  3. Autonomous mode: set your API key once — export DSH_DEEPSEEK_API_KEY=sk-..." ;;
+esac
+case "$(uname)" in
+  Darwin)
+    echo ""
+    printf "Open the Action Panel now? [Y/n]: "; read OP
+    case "$OP" in
+      n|N|no) ;;
+      *) [ -f "$ROOT/ui/panel.html" ] && open "$ROOT/ui/panel.html" || true ;;
+    esac
+    ;;
+  Linux)
+    if command -v xdg-open >/dev/null 2>&1; then
+      echo ""
+      printf "Open the Action Panel now? [Y/n]: "; read OP
+      case "$OP" in
+        n|N|no) ;;
+        *) xdg-[ -f "$ROOT/ui/panel.html" ] && open "$ROOT/ui/panel.html" || true ;;
+      esac
+    fi
+    ;;
+esac

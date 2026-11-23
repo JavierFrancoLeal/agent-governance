@@ -1,0 +1,29 @@
+# OS & Editors
+.DS_Store
+Thumbs.db
+*.swp
+
+# Build & Package Artifacts
+dist/
+*.tgz
+node_modules/
+__pycache__/
+*.pyc
+
+# Private / Binary Documents (NEVER commit to public open-source repos)
+private/
+*.docx
+*.pdf
+prompts.html
+prompt-*.txt
+
+# Secrets & Credentials
+.env
+*.env
+.credentials.yaml
+supervisor-users.json
+oauth_creds.json
+*.jks
+*.keystore
+*.pem
+*.key
